@@ -272,7 +272,7 @@ a.featured-name:hover { text-decoration: underline; }
   }
 
 
-  nav ul { display: none; }
+  nav ul, footer ul { display: none; }
   h2 { max-width: 100%; }
   .featured-logos { gap: 2rem; }
   .featured-logos img { max-height: 36px; }
