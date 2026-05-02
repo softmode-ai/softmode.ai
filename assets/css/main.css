@@ -105,6 +105,8 @@ h2 {
   align-self: center;
 }
 
+.section-img--left { justify-self: start; }
+
 /* ── S3: FORM ── */
 #s-form .image-wrap {
   position: relative;
@@ -234,11 +236,19 @@ a.featured-name:hover { text-decoration: underline; }
   width: 100%;
 }
 
-.cta-block p {
+.cta-label {
+  font-size: var(--size-nav);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.cta-block p:not(.cta-label) {
   font-size: var(--size-subtitle);
   line-height: 1.6;
   color: var(--ink);
-  margin-bottom: 1rem;
   font-weight: 400;
 }
 
@@ -256,6 +266,8 @@ a.featured-name:hover { text-decoration: underline; }
 }
 
 .cta:hover { background: var(--ink); color: var(--bg); }
+
+.cta--full { display: block; width: 100%; text-align: center; padding: 1.5rem 2rem; }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
