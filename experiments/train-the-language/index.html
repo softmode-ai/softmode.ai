@@ -2283,9 +2283,12 @@
       document.getElementById('split-sel').classList.remove('show');
       document.getElementById('split-ind').classList.remove('show');
       document.getElementById('bt-split').classList.remove('on');
-      document.getElementById('sys-headline').classList.remove('show');
-      document.getElementById('sys-sub').classList.remove('show');
-      document.getElementById('sys-panel').textContent = 'sculpt to begin';
+      const sysHeadline = document.getElementById('sys-headline');
+      if (sysHeadline) sysHeadline.classList.remove('show');
+      const sysSub = document.getElementById('sys-sub');
+      if (sysSub) sysSub.classList.remove('show');
+      const sysPanel = document.getElementById('sys-panel');
+      if (sysPanel) sysPanel.textContent = 'sculpt to begin';
       document.getElementById('tags-summary').textContent = '';
       activateStep(1);
       document.getElementById('tag-scroll').classList.remove('active');
@@ -2301,6 +2304,8 @@
     animate();
 
     // Contribute
+    const API = "https://ai.clai-softmode.workers.dev";
+
     document.getElementById('add-btn').addEventListener('click', async () => {
       const btn = document.getElementById('add-btn');
       btn.disabled = true; btn.textContent = 'Recording...';
@@ -2309,25 +2314,65 @@
       const qualities = [...selectedQualities].map(k => k.split(':').slice(3).join(':'));
       const custom = [...customTags];
       const entry = { id: Date.now(), descriptors: { ...descriptors }, tags, nuances, qualities, custom, split: isSplitState, timestamp: new Date().toISOString() };
+
+      let similar = [];
       try {
-        await window.storage.set(`form:${entry.id}`, JSON.stringify(entry));
-        const cr = await window.storage.get('total').catch(() => null);
-        await window.storage.set('total', String((cr ? parseInt(cr.value) : 0) + 1));
-      } catch (e) { }
+        const res = await fetch(`${API}/contribute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ descriptors, tags, nuances, qualities, custom }),
+        });
+        if (res.ok) {
+          const simRes = await fetch(`${API}/similar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ descriptors }),
+          });
+          if (simRes.ok) similar = await simRes.json();
+        }
+      } catch (e) {
+        // Degrade gracefully — Worker unreachable
+      }
+
       contribCount++;
       document.getElementById('cn').textContent = contribCount;
       document.getElementById('fn').textContent = contribCount;
-      addFeed(entry);
+      addFeed(entry, similar);
       document.getElementById('confirm').classList.add('show');
       btn.textContent = 'Added';
       setTimeout(() => { document.getElementById('confirm').classList.remove('show'); document.getElementById('bt-reset').click(); btn.textContent = 'Add to Dataset'; }, 2200);
     });
 
-    function addFeed(entry) {
+    function addFeed(entry, similar) {
+      const feedEl = document.getElementById('feed-items');
+
+      // Contribution chips
       const fi = document.createElement('div'); fi.className = 'fi';
-      entry.tags.forEach((t, i) => { const c = document.createElement('span'); c.className = 'fc'; c.textContent = t; fi.appendChild(c); });
+      entry.tags.forEach(t => { const c = document.createElement('span'); c.className = 'fc'; c.textContent = t; fi.appendChild(c); });
       entry.nuances.slice(0, 3).forEach(n => { const c = document.createElement('span'); c.className = 'fc n'; c.textContent = n; fi.appendChild(c); });
-      document.getElementById('feed-items').insertBefore(fi, document.getElementById('feed-items').firstChild);
+      feedEl.insertBefore(fi, feedEl.firstChild);
+
+      // Similar past forms
+      if (similar && similar.length) {
+        const si = document.createElement('div');
+        si.className = 'fi';
+        si.style.cssText = 'padding-top:3px;border-top:1px solid rgba(237,232,224,0.04);margin-top:4px;';
+        const lbl = document.createElement('span');
+        lbl.style.cssText = 'font-size:7px;color:var(--dim);letter-spacing:0.1em;text-transform:uppercase;margin-right:6px;white-space:nowrap;';
+        lbl.textContent = 'Similar:';
+        si.appendChild(lbl);
+        similar.slice(0, 3).forEach(s => {
+          const tags = s.tags?.tags || [];
+          if (tags.length) {
+            const sc = document.createElement('span');
+            sc.className = 'fc';
+            sc.style.cssText = 'opacity:0.6;';
+            sc.textContent = tags[0];
+            si.appendChild(sc);
+          }
+        });
+        feedEl.insertBefore(si, feedEl.firstChild);
+      }
     }
 
     window.storage?.get('total').then(r => { if (r) document.getElementById('cn').textContent = r.value; }).catch(() => { });
