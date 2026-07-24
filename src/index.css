@@ -551,3 +551,4 @@ a.featured-name:hover { text-decoration: underline; }
   #s-research .research-cards {
     grid-template-columns: 1fr;
   }
+}
