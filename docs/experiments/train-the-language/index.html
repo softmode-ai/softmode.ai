@@ -1,0 +1,2383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CL[AI] — Train the Language</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap');
+
+    :root {
+      --bg: #141010;
+      --panel: #0f0c0a;
+      --ink: #EDE8E0;
+      --dim: #5a4a38;
+      --mid: #8a7a68;
+      --signal: #d4a847;
+      --clay: #c4a882;
+      --border: rgba(237, 232, 224, 0.1);
+      --chip-bg: rgba(237, 232, 224, 0.06);
+      --chip-border: rgba(237, 232, 224, 0.14);
+      --emotion: #c47e7e;
+      --gesture: #7eab8a;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      list-style: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'DM Mono', monospace;
+      height: 100vh;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 40px 1fr;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+    }
+
+    .logo em {
+      color: var(--signal);
+      font-style: normal;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+      text-transform: uppercase;
+    }
+
+    .contrib-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .contrib-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--signal);
+    }
+
+    /* ── MAIN ── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 310px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── CANVAS ── */
+    #cw {
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Tool bar — top */
+    .tool-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      gap: 8px;
+    }
+
+    .tool-left {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .tool-right {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .tb {
+      background: transparent;
+      border: 1px solid var(--chip-border);
+      color: var(--dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      padding: 5px 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.1s;
+      position: relative;
+    }
+
+    .tb:hover {
+      border-color: var(--clay);
+      color: var(--clay);
+    }
+
+    .tb.on {
+      border-color: var(--signal);
+      color: var(--signal);
+      background: rgba(212, 168, 71, 0.08);
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      background: #0a0806;
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      width: 160px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 200;
+      text-align: left;
+    }
+
+    .tb:hover .tooltip {
+      opacity: 1;
+    }
+
+    .tt-name {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--clay);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .tt-desc {
+      display: block;
+      font-size: 8px;
+      letter-spacing: 0.04em;
+      color: var(--mid);
+      line-height: 1.6;
+      text-transform: none;
+      font-style: italic;
+    }
+
+    .divider {
+      width: 1px;
+      height: 16px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    .form-btn {
+      background: transparent;
+      border: 1px solid var(--chip-border);
+      color: var(--dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      padding: 5px 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.1s;
+      position: relative;
+    }
+
+    .form-btn:hover {
+      border-color: var(--clay);
+      color: var(--clay);
+    }
+
+    .form-btn:hover .tooltip {
+      opacity: 1;
+    }
+
+    .reset-btn {
+      background: transparent;
+      border: 1px solid var(--chip-border);
+      color: var(--dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      padding: 5px 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.1s;
+    }
+
+    .reset-btn:hover {
+      border-color: var(--clay);
+      color: var(--clay);
+    }
+
+    /* Brush row */
+    .brush-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 8px;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      position: relative;
+    }
+
+    .brush-popup {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      background: #0a0806;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      width: 200px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 300;
+      text-align: left;
+    }
+
+    .brush-row:hover .brush-popup {
+      opacity: 1;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 64px;
+      height: 1px;
+      background: rgba(237, 232, 224, 0.15);
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--clay);
+      cursor: pointer;
+    }
+
+    /* Split button */
+    .split-btn {
+      background: transparent;
+      border: 1px solid var(--chip-border);
+      color: var(--dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      padding: 5px 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.1s;
+      position: relative;
+    }
+
+    .split-btn:hover {
+      border-color: var(--signal);
+      color: var(--signal);
+    }
+
+    .split-btn.on {
+      border-color: var(--signal);
+      color: var(--signal);
+      background: rgba(212, 168, 71, 0.08);
+    }
+
+    .split-btn:hover .tooltip {
+      opacity: 1;
+    }
+
+    /* Canvas */
+    #c {
+      display: block;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* Canvas hint */
+    .canvas-hint {
+      position: absolute;
+      bottom: 10px;
+      left: 14px;
+      font-size: 9px;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      pointer-events: none;
+    }
+
+    /* Form desc pills on canvas */
+    .desc-pills {
+      position: absolute;
+      bottom: 10px;
+      right: 14px;
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      pointer-events: none;
+    }
+
+    .dp {
+      font-size: 8px;
+      padding: 2px 7px;
+      border: 1px solid rgba(237, 232, 224, 0.1);
+      color: var(--dim);
+      letter-spacing: 0.05em;
+      transition: all 0.3s;
+    }
+
+    .dp.lit {
+      border-color: rgba(237, 232, 224, 0.25);
+      color: var(--mid);
+    }
+
+    /* Split indicator */
+    .split-ind {
+      position: absolute;
+      top: 52px;
+      right: 14px;
+      font-size: 8px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--signal);
+      border: 1px solid rgba(212, 168, 71, 0.2);
+      padding: 3px 8px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .split-ind.show {
+      opacity: 1;
+    }
+
+    /* System reading on canvas */
+    .sys-overlay {
+      position: absolute;
+      top: 52px;
+      left: 14px;
+      pointer-events: none;
+    }
+
+    .sys-headline {
+      font-size: 22px;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+      line-height: 1.1;
+      opacity: 0;
+      transition: opacity 0.5s;
+      text-transform: uppercase;
+    }
+
+    .sys-headline.show {
+      opacity: 1;
+    }
+
+    .sys-sub {
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      color: var(--mid);
+      margin-top: 4px;
+      opacity: 0;
+      transition: opacity 0.5s 0.1s;
+      font-style: italic;
+    }
+
+    .sys-sub.show {
+      opacity: 1;
+    }
+
+    /* ── PANEL ── */
+    #panel {
+      border-left: 1px solid var(--border);
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* Step */
+    .step {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .step-hd {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .step-num {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid var(--dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      color: var(--dim);
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .step-num.active {
+      border-color: var(--signal);
+      color: var(--signal);
+    }
+
+    .step-title {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--dim);
+      transition: color 0.2s;
+    }
+
+    .step-title.active {
+      color: var(--ink);
+    }
+
+    /* Descriptor chips */
+    .desc-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .desc-chip {
+      font-size: 8px;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border: 1px solid var(--chip-border);
+      color: var(--dim);
+      transition: all 0.3s;
+    }
+
+    .desc-chip.lit {
+      border-color: rgba(237, 232, 224, 0.3);
+      color: var(--mid);
+    }
+
+    /* Tag section */
+    .tag-section {
+      margin-bottom: 10px;
+    }
+
+    .tag-cat-hd {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 6px;
+      font-size: 8px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .cat-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .tags-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    /* Tag chip — flat, no funnel to start */
+    .tag-chip {
+      font-size: 9px;
+      font-style: italic;
+      padding: 3px 9px;
+      border: 1px solid var(--chip-border);
+      color: var(--dim);
+      cursor: pointer;
+      transition: all 0.1s;
+      user-select: none;
+      position: relative;
+    }
+
+    .tag-chip:hover {
+      border-color: var(--clay);
+      color: var(--clay);
+    }
+
+    .tag-chip.sel {
+      border-color: var(--signal);
+      color: var(--signal);
+      background: rgba(212, 168, 71, 0.08);
+      font-style: normal;
+    }
+
+    /* Nuance row — appears under selected tag */
+    .nuance-row {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-top: 5px;
+      padding-left: 2px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+    }
+
+    .nuance-row.open {
+      max-height: 120px;
+    }
+
+    .nuance-chip {
+      font-size: 8px;
+      font-style: italic;
+      padding: 2px 7px;
+      border: 1px solid rgba(237, 232, 224, 0.08);
+      color: var(--dim);
+      cursor: pointer;
+      transition: all 0.1s;
+      user-select: none;
+    }
+
+    .nuance-chip:hover {
+      border-color: var(--clay);
+      color: var(--clay);
+    }
+
+    .nuance-chip.sel {
+      border-color: var(--signal);
+      color: var(--signal);
+      background: rgba(212, 168, 71, 0.06);
+      font-style: normal;
+    }
+
+    /* Level 3 — quality chips */
+    .quality-row {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-top: 4px;
+      padding-left: 10px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.2s ease;
+    }
+
+    .quality-row.open {
+      max-height: 80px;
+    }
+
+    .quality-chip {
+      font-size: 8px;
+      font-style: italic;
+      padding: 2px 6px;
+      border: 1px solid rgba(237, 232, 224, 0.06);
+      color: rgba(237, 232, 224, 0.3);
+      cursor: pointer;
+      transition: all 0.1s;
+      user-select: none;
+    }
+
+    .quality-chip:hover {
+      border-color: var(--mid);
+      color: var(--mid);
+    }
+
+    .quality-chip.sel {
+      border-color: var(--clay);
+      color: var(--clay);
+      background: rgba(196, 168, 130, 0.06);
+      font-style: normal;
+    }
+
+    /* Tag scroll */
+    .tag-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px;
+      min-height: 0;
+      opacity: 0.3;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .tag-scroll.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .tag-scroll::-webkit-scrollbar {
+      width: 2px;
+    }
+
+    .tag-scroll::-webkit-scrollbar-thumb {
+      background: rgba(237, 232, 224, 0.1);
+    }
+
+    /* Selection count */
+    .sel-count {
+      font-size: 8px;
+      color: var(--dim);
+      letter-spacing: 0.06em;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    .sel-count strong {
+      color: var(--mid);
+      font-style: normal;
+    }
+
+    /* Split form selector */
+    .split-sel {
+      display: none;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .split-sel.show {
+      display: flex;
+    }
+
+    .fsel {
+      flex: 1;
+      text-align: center;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 5px;
+      border: 1px solid var(--chip-border);
+      cursor: pointer;
+      color: var(--dim);
+      transition: all 0.1s;
+    }
+
+    .fsel:hover {
+      border-color: var(--clay);
+      color: var(--clay);
+    }
+
+    .fsel.act {
+      border-color: var(--signal);
+      color: var(--signal);
+    }
+
+    /* Modality step */
+    .mod-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 5px;
+    }
+
+    .mod-btn {
+      text-align: center;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 8px 5px;
+      border: 1px solid var(--chip-border);
+      cursor: pointer;
+      color: var(--dim);
+      transition: all 0.1s;
+    }
+
+    .mod-btn:hover {
+      border-color: var(--clay);
+      color: var(--clay);
+    }
+
+    .mod-btn.sel {
+      border-color: var(--signal);
+      color: var(--signal);
+      background: rgba(212, 168, 71, 0.08);
+    }
+
+    /* Contribute */
+    .add-btn {
+      width: 100%;
+      background: rgba(237, 232, 224, 0.06);
+      border: 1px solid var(--chip-border);
+      color: var(--mid);
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      padding: 12px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.15s;
+    }
+
+    .add-btn:hover:not(:disabled) {
+      background: rgba(212, 168, 71, 0.1);
+      border-color: var(--signal);
+      color: var(--signal);
+    }
+
+    .add-btn:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    .confirm {
+      text-align: center;
+      font-size: 9px;
+      font-style: italic;
+      color: var(--signal);
+      letter-spacing: 0.08em;
+      opacity: 0;
+      transition: opacity 0.3s;
+      height: 0;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .confirm.show {
+      opacity: 1;
+      height: auto;
+    }
+
+    /* Dataset footer */
+    .dataset-footer {
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      font-size: 8px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    /* System interpretation overlay */
+    .sys-overlay {
+      position: absolute;
+      top: 52px;
+      left: 14px;
+      pointer-events: none;
+    }
+
+    .sys-interp {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      max-width: 340px;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+
+    .sys-interp.show {
+      opacity: 1;
+    }
+
+    .interp-chip {
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      padding: 3px 9px;
+      border: 1px solid rgba(237, 232, 224, 0.2);
+      color: var(--ink);
+      background: rgba(20, 16, 16, 0.6);
+      font-style: italic;
+    }
+
+    .interp-chip.primary {
+      font-style: normal;
+      border-color: rgba(237, 232, 224, 0.35);
+      color: var(--clay-light, #eedfc4);
+    }
+
+    .sys-lbl {
+      font-size: 7px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--dim);
+      flex-shrink: 0;
+    }
+
+    .sys-txt {
+      font-size: 9px;
+      font-style: italic;
+      color: var(--mid);
+      letter-spacing: 0.04em;
+      line-height: 1.4;
+    }
+
+    .sys-thinking {
+      font-size: 8px;
+      color: var(--dim);
+      animation: blink 1.2s infinite;
+      letter-spacing: 0.08em;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.2
+      }
+    }
+
+    /* Feed */
+    .feed {
+      padding: 6px 14px 8px;
+      border-top: 1px solid var(--border);
+      max-height: 70px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+
+    .feed::-webkit-scrollbar {
+      width: 2px;
+    }
+
+    .feed::-webkit-scrollbar-thumb {
+      background: rgba(237, 232, 224, 0.08);
+    }
+
+    .fi {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-bottom: 3px;
+      animation: fad 0.3s ease;
+    }
+
+    @keyframes fad {
+      from {
+        opacity: 0
+      }
+
+      to {
+        opacity: 1
+      }
+    }
+
+    .fc {
+      font-size: 8px;
+      font-style: italic;
+      padding: 1px 5px;
+      border: 1px solid rgba(237, 232, 224, 0.08);
+      color: var(--mid);
+    }
+
+    .fc.n {
+      color: var(--signal);
+      border-color: rgba(212, 168, 71, 0.15);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Intro overlay -->
+  <div id="intro" style="
+  position:fixed;inset:0;
+  background:rgba(20,16,16,0.82);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:32px;
+  padding:40px;
+">
+    <div style="max-width:480px;text-align:left;">
+      <div
+        style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#5a4a38;margin-bottom:20px;">
+        CL[AI] — Train the Language</div>
+      <div
+        style="font-family:'DM Mono',monospace;font-size:22px;letter-spacing:0.04em;color:#EDE8E0;line-height:1.3;margin-bottom:20px;">
+        You are training the material prompt language.</div>
+      <div style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.05em;color:#8a7a68;line-height:1.9;">
+        Sculpt a form using the tools on the left. The system will read its physical properties. You assign the
+        emotional and gestural meaning. Each contribution builds the dataset that teaches CL[AI] how form translates to
+        feeling.
+      </div>
+    </div>
+    <button onclick="document.getElementById('intro').style.display='none'" style="
+    background:transparent;
+    border:1px solid rgba(237,232,224,0.25);
+    color:#EDE8E0;
+    font-family:'DM Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    padding:12px 32px;
+    cursor:pointer;
+    transition:all 0.15s;
+    max-width:480px;
+    width:100%;
+  " onmouseover="this.style.borderColor='#d4a847';this.style.color='#d4a847'"
+      onmouseout="this.style.borderColor='rgba(237,232,224,0.25)';this.style.color='#EDE8E0'">
+      Begin
+    </button>
+  </div>
+
+  <header>
+    <div class="logo">CL<em>[AI]</em> — Train the Language</div>
+    <div class="header-right">
+      <div class="contrib-pill">
+        contributions: <strong id="cn" style="color:var(--signal);margin-left:4px;">0</strong>
+        <div class="contrib-dot"></div>
+      </div>
+      <span>Soft Mode</span>
+      <span style="color:var(--border)">·</span>
+      <span>softmode.ai</span>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- CANVAS SIDE -->
+    <div id="cw">
+
+      <!-- Tool bar top -->
+      <div class="tool-bar">
+        <div class="tool-left">
+          <button class="tb on" id="bt-push">Push
+            <span class="tooltip"><span class="tt-name">Push</span><span class="tt-desc">Press into the clay. Drag to
+                indent and compress the surface inward.</span></span>
+          </button>
+          <button class="tb" id="bt-pull">Pull
+            <span class="tooltip"><span class="tt-name">Pull</span><span class="tt-desc">Draw clay outward. Drag slowly
+                and repeat for tall forms.</span></span>
+          </button>
+          <button class="tb" id="bt-smooth">Smooth
+            <span class="tooltip"><span class="tt-name">Smooth</span><span class="tt-desc">Soften rough or sharp areas.
+                Drag over the surface to blend.</span></span>
+          </button>
+          <button class="tb" id="bt-flatten">Flatten
+            <span class="tooltip"><span class="tt-name">Flatten</span><span class="tt-desc">Level the surface toward a
+                plane. Good for bases and flat faces.</span></span>
+          </button>
+          <button class="tb" id="bt-pinch">Pinch
+            <span class="tooltip"><span class="tt-name">Pinch</span><span class="tt-desc">Draw clay to a point. Use for
+                ridges, peaks, and narrow necks.</span></span>
+          </button>
+
+          <div class="divider"></div>
+
+          <button class="form-btn" id="bt-cylinder">Cylinder
+            <span class="tooltip"><span class="tt-name">Cylinder</span><span class="tt-desc">Press to round the clay
+                into a cylinder. Press multiple times for more effect.</span></span>
+          </button>
+          <button class="form-btn" id="bt-sphere">Sphere
+            <span class="tooltip"><span class="tt-name">Sphere</span><span class="tt-desc">Reset the clay toward a
+                sphere without a full reset.</span></span>
+          </button>
+
+          <div class="divider"></div>
+
+          <button class="split-btn" id="bt-split">Split
+            <span class="tooltip"><span class="tt-name">Split Clay</span><span class="tt-desc">Divide the clay into two
+                independent forms. Tag each separately.</span></span>
+          </button>
+          <button class="split-btn" id="bt-merge" style="display:none;">Merge
+            <span class="tooltip"><span class="tt-name">Merge Forms</span><span class="tt-desc">Combine both forms into
+                one. The merged form reflects the geometry of both.</span></span>
+          </button>
+        </div>
+
+        <div class="tool-right">
+          <div class="brush-row" id="brush-row" style="position:relative;">
+            <span
+              style="cursor:default;font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);">Brush</span>
+            <input type="range" id="bsize" min="12" max="68" value="36">
+            <div class="brush-popup">
+              <span class="tt-name">Brush Size</span>
+              <span class="tt-desc">Controls how wide each sculpt tool affects the clay.<br><br>
+                <span style="color:var(--clay);">Small</span> — precise work. Sharp ridges, narrow peaks, fine
+                detail.<br><br>
+                <span style="color:var(--clay);">Large</span> — broad strokes. Move the whole form at once.</span>
+            </div>
+          </div>
+          <button class="reset-btn" id="bt-reset">Reset Clay</button>
+        </div>
+      </div>
+
+      <canvas id="c"></canvas>
+
+      <!-- System interpretation overlay — tag vocabulary -->
+      <div class="sys-overlay">
+        <div class="sys-interp" id="sys-interp"></div>
+      </div>
+
+      <div class="split-ind" id="split-ind">Two Forms</div>
+      <div class="canvas-hint">Drag to sculpt · Shift+drag or scroll to rotate</div>
+    </div>
+
+    <!-- PANEL -->
+    <div id="panel">
+
+      <!-- Step 1 -->
+      <div class="step" id="step1">
+        <div class="step-hd">
+          <div class="step-num active" id="sn1">1</div>
+          <div class="step-title active">Sculpt a form</div>
+        </div>
+      </div>
+
+      <!-- Split selector -->
+      <div class="split-sel" id="split-sel">
+        <div class="fsel act" id="sel-a" onclick="selectForm('a')">Form A</div>
+        <div class="fsel" id="sel-b" onclick="selectForm('b')">Form B</div>
+        <div class="fsel" id="sel-rel" onclick="selectForm('rel')">Relation</div>
+      </div>
+
+      <!-- Step 2: Tags -->
+      <div class="step" id="step2" style="padding-bottom:8px;">
+        <div class="step-hd">
+          <div class="step-num" id="sn2">2</div>
+          <div class="step-title" id="st2">Tag what it means</div>
+        </div>
+      </div>
+
+      <div class="tag-scroll" id="tag-scroll">
+        <div id="tag-content"></div>
+        <div class="sel-count" id="sel-count">Select tags to describe the form</div>
+        <div class="custom-tag-wrap" id="custom-tag-wrap">
+          <div style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px;">
+            Not there? Add your own</div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input id="custom-tag-input" type="text" placeholder="type a word..." style="
+            background:transparent;
+            border:1px solid var(--chip-border);
+            color:var(--ink);
+            font-family:'DM Mono',monospace;
+            font-size:10px;
+            letter-spacing:0.06em;
+            padding:5px 10px;
+            outline:none;
+            flex:1;
+            font-style:italic;
+          " />
+            <button id="custom-tag-btn" style="
+            background:transparent;
+            border:1px solid var(--chip-border);
+            color:var(--dim);
+            font-family:'DM Mono',monospace;
+            font-size:9px;
+            letter-spacing:0.1em;
+            padding:5px 10px;
+            cursor:pointer;
+            text-transform:uppercase;
+            transition:all 0.1s;
+            white-space:nowrap;
+          ">Add</button>
+          </div>
+          <div id="custom-tags-display" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <!-- Step 3: Contribute -->
+      <div class="step" id="step4">
+        <div class="step-hd">
+          <div class="step-num" id="sn4">3</div>
+          <div class="step-title" id="st4">Contribute</div>
+        </div>
+        <button class="add-btn" id="add-btn" disabled>Add to Dataset</button>
+        <div class="confirm" id="confirm">Form recorded.</div>
+      </div>
+
+      <!-- Feed -->
+      <div class="feed" id="feed-wrap">
+        <div id="feed-items"></div>
+      </div>
+
+      <!-- Dataset footer -->
+      <div class="dataset-footer">
+        <span>Dataset — <span id="fn">0</span> forms</span>
+        <span id="tags-summary"
+          style="color:var(--mid);font-style:italic;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ─── TAG TAXONOMY — two levels of nuance ──────────────────────────────────────
+
+    const TAGS = {
+      emotion: {
+        color: 'var(--emotion)',
+        families: [
+          {
+            label: 'Joy',
+            items: [
+              {
+                label: 'happiness', nuances: [
+                  { label: 'contentment', qualities: ['quiet', 'daily', 'simple', 'enough', 'settled'] },
+                  { label: 'delight', qualities: ['sudden', 'light', 'surprising', 'childlike', 'pure'] },
+                  { label: 'elation', qualities: ['soaring', 'unexpected', 'brief', 'full', 'electric'] },
+                  { label: 'warmth', qualities: ['gentle', 'shared', 'safe', 'glowing', 'intimate'] },
+                ]
+              },
+              {
+                label: 'excitement', nuances: [
+                  { label: 'anticipation', qualities: ['before it arrives', 'building', 'electric', 'rushing toward', 'restless'] },
+                  { label: 'exhilaration', qualities: ['in the body', 'alive', 'kinetic', 'rushing', 'present'] },
+                  { label: 'enthusiasm', qualities: ['toward something', 'energized', 'willing', 'open', 'forward'] },
+                ]
+              },
+              {
+                label: 'relief', nuances: [
+                  { label: 'release', qualities: ['exhale', 'after long holding', 'finally', 'the weight lifted', 'free'] },
+                  { label: 'reprieve', qualities: ['temporary', 'grateful', 'aware it could return', 'precious', 'now'] },
+                  { label: 'resolution', qualities: ['it ended well', 'arrived safely', 'safe now', 'the threat passed', 'rest'] },
+                ]
+              },
+              {
+                label: 'gratitude', nuances: [
+                  { label: 'thankfulness', qualities: ['for presence', 'for what is', 'simple', 'daily', 'quiet'] },
+                  { label: 'wonder-gratitude', qualities: ['that this exists', 'overwhelming', 'beyond words', 'undeserved', 'tears'] },
+                  { label: 'appreciation', qualities: ['for what remains', 'despite everything', 'still here', 'enduring', 'enough'] },
+                ]
+              },
+              {
+                label: 'pride', nuances: [
+                  { label: 'self-pride', qualities: ['earned', 'quiet', 'surprising', 'against odds', 'finally'] },
+                  { label: 'pride in another', qualities: ['watching them', 'devotional', 'for who they became', 'expansive', 'theirs and mine'] },
+                  { label: 'collective pride', qualities: ['shared', 'belonging to something', 'ours', 'what we made', 'where we come from'] },
+                ]
+              },
+              {
+                label: 'euphoria', nuances: [
+                  { label: 'ecstasy', qualities: ['beyond self', 'total', 'consuming', 'transcendent', 'dissolved'] },
+                  { label: 'bliss', qualities: ['still', 'radiant', 'complete', 'arrived', 'peaceful'] },
+                  { label: 'elation', qualities: ['electric', 'soaring', 'overflowing', 'can\'t contain', 'alive'] },
+                ]
+              },
+            ]
+          },
+          {
+            label: 'Love',
+            items: [
+              {
+                label: 'tenderness', nuances: [
+                  { label: 'gentleness', qualities: ['soft', 'careful', 'aware of fragility', 'protective', 'reverent'] },
+                  { label: 'vulnerability', qualities: ['offered', 'exposed', 'brave', 'trusting', 'open'] },
+                  { label: 'ache', qualities: ['sweet pain', 'across distance', 'despite everything', 'quiet', 'persistent'] },
+                  { label: 'devotion', qualities: ['daily', 'without announcement', 'chosen again', 'steady', 'faithful'] },
+                ]
+              },
+              {
+                label: 'love', nuances: [
+                  { label: 'adoration', qualities: ['overwhelmed by them', 'grateful they exist', 'can\'t look away', 'full', 'reverent'] },
+                  { label: 'attachment', qualities: ['bound to', 'cannot imagine without', 'woven in', 'dependent', 'necessary'] },
+                  { label: 'passion', qualities: ['consuming', 'urgent', 'whole body', 'cannot not', 'alive'] },
+                  { label: 'companionship', qualities: ['ease', 'known', 'safe', 'beside each other', 'long time'] },
+                ]
+              },
+              {
+                label: 'compassion', nuances: [
+                  { label: 'empathy', qualities: ['feeling with them', 'not fixing', 'present', 'witnessing', 'receiving their pain'] },
+                  { label: 'mercy', qualities: ['despite what was done', 'releasing', 'choosing it', 'not deserved but given', 'grace'] },
+                  { label: 'self-compassion', qualities: ['hard won', 'unfamiliar', 'needed', 'gentle with oneself', 'overdue'] },
+                ]
+              },
+              {
+                label: 'longing', nuances: [
+                  { label: 'yearning', qualities: ['deep pull', 'whole body', 'toward', 'ache of it', 'unnamed'] },
+                  { label: 'nostalgia', qualities: ['for what was', 'sweet and sad', 'irretrievable', 'remembered differently', 'bittersweet'] },
+                  { label: 'desire', qualities: ['wanting', 'specific', 'toward something or someone', 'urgent', 'present'] },
+                  { label: 'homesickness', qualities: ['for a place', 'for a time', 'for a feeling', 'in the body', 'just out of reach'] },
+                ]
+              },
+              {
+                label: 'intimacy', nuances: [
+                  { label: 'closeness', qualities: ['wordless', 'understood', 'no distance', 'safe', 'complete'] },
+                  { label: 'vulnerability-shared', qualities: ['both open', 'held and holding', 'witnessed', 'known', 'real'] },
+                  { label: 'trust', qualities: ['built over time', 'chosen', 'fragile and strong', 'real', 'proven'] },
+                ]
+              },
+            ]
+          },
+          {
+            label: 'Sadness',
+            items: [
+              {
+                label: 'grief', nuances: [
+                  { label: 'loss', qualities: ['acute', 'irreversible', 'present', 'real', 'undeniable'] },
+                  { label: 'mourning', qualities: ['in process', 'waves of it', 'returning', 'long', 'with others'] },
+                  { label: 'sorrow', qualities: ['deep', 'quiet', 'carried', 'old', 'settled in'] },
+                  { label: 'heartbreak', qualities: ['sharp', 'sudden', 'specific', 'personal', 'physical'] },
+                ]
+              },
+              {
+                label: 'melancholy', nuances: [
+                  { label: 'wistfulness', qualities: ['gentle', 'sweet', 'for what was', 'soft', 'lingering'] },
+                  { label: 'pensiveness', qualities: ['inward', 'reflective', 'still', 'turning something over', 'quiet'] },
+                  { label: 'bittersweetness', qualities: ['both at once', 'complex', 'real', 'precious', 'mixed'] },
+                  { label: 'heaviness', qualities: ['weighted', 'slow', 'in the body', 'pervasive', 'low'] },
+                ]
+              },
+              {
+                label: 'loneliness', nuances: [
+                  { label: 'isolation', qualities: ['cut off', 'separated', 'alone despite', 'unreachable', 'closed off'] },
+                  { label: 'disconnection', qualities: ['beside but apart', 'can\'t get through', 'invisible', 'surface only', 'hollow'] },
+                  { label: 'missing', qualities: ['specific person', 'specific place', 'specific time', 'ache of absence', 'present'] },
+                  { label: 'longing for belonging', qualities: ['not yet found', 'reaching', 'hoping', 'on the outside', 'seeking'] },
+                ]
+              },
+              {
+                label: 'disappointment', nuances: [
+                  { label: 'disillusionment', qualities: ['what I thought wasn\'t', 'revision', 'loss of the story', 'clear-eyed now', 'sad clarity'] },
+                  { label: 'letdown', qualities: ['expected more', 'gap between hoped and real', 'deflation', 'flat', 'quiet'] },
+                  { label: 'self-disappointment', qualities: ['again', 'the familiar gap', 'I thought I could', 'not enough', 'turning inward'] },
+                ]
+              },
+              {
+                label: 'nostalgia', nuances: [
+                  { label: 'remembering', qualities: ['vivid', 'in the senses', 'as if present', 'altered by time', 'precious'] },
+                  { label: 'longing for the past', qualities: ['irretrievable', 'sweetly painful', 'idealized', 'gone', 'can\'t return'] },
+                  { label: 'grief for time', qualities: ['it moved', 'I didn\'t notice', 'it\'s different now', 'can\'t go back', 'bittersweet'] },
+                ]
+              },
+            ]
+          },
+          {
+            label: 'Fear',
+            items: [
+              {
+                label: 'dread', nuances: [
+                  { label: 'foreboding', qualities: ['something coming', 'undeniable', 'before it arrives', 'slow', 'certain'] },
+                  { label: 'doom', qualities: ['inevitable', 'total', 'no exit', 'overwhelming', 'final'] },
+                  { label: 'apprehension', qualities: ['unnamed', 'ambient', 'beneath everything', 'pervasive', 'building'] },
+                ]
+              },
+              {
+                label: 'anxiety', nuances: [
+                  { label: 'worry', qualities: ['specific', 'circular', 'returning', 'projecting forward', 'wearing'] },
+                  { label: 'unease', qualities: ['unnamed', 'floating', 'can\'t locate it', 'ambient', 'persistent'] },
+                  { label: 'panic', qualities: ['sudden', 'consuming', 'in the body', 'overwhelming', 'animal'] },
+                ]
+              },
+              {
+                label: 'vulnerability', nuances: [
+                  { label: 'exposure', qualities: ['seen', 'without armor', 'in the open', 'nowhere to hide', 'raw'] },
+                  { label: 'fragility', qualities: ['breakable', 'aware of it', 'careful', 'precious', 'thin'] },
+                  { label: 'openness', qualities: ['chosen despite risk', 'brave', 'trusting', 'offered', 'real'] },
+                ]
+              },
+              {
+                label: 'shame', nuances: [
+                  { label: 'self-judgment', qualities: ['I am the problem', 'not what I did but who I am', 'deep', 'old', 'quiet'] },
+                  { label: 'guilt', qualities: ['about something done', 'specific', 'seeking repair', 'accountable', 'real'] },
+                  { label: 'unworthiness', qualities: ['not enough', 'don\'t deserve', 'comparative', 'inherited', 'not true but felt'] },
+                ]
+              },
+              {
+                label: 'uncertainty', nuances: [
+                  { label: 'not knowing', qualities: ['suspended', 'open', 'both possible', 'no ground', 'held in it'] },
+                  { label: 'confusion', qualities: ['can\'t see clearly', 'disoriented', 'lost', 'reaching for clarity', 'fog'] },
+                  { label: 'doubt', qualities: ['of self', 'of others', 'of the path', 'questioning', 'unsettled'] },
+                ]
+              },
+            ]
+          },
+          {
+            label: 'Anger',
+            items: [
+              {
+                label: 'rage', nuances: [
+                  { label: 'fury', qualities: ['consuming', 'total', 'burning', 'physical', 'righteous'] },
+                  { label: 'wrath', qualities: ['slow-built', 'certain', 'final', 'earned', 'cold'] },
+                  { label: 'indignation', qualities: ['principled', 'at wrongness', 'on behalf of', 'not personal', 'clear'] },
+                ]
+              },
+              {
+                label: 'frustration', nuances: [
+                  { label: 'irritation', qualities: ['surface', 'repeated', 'wearing', 'small accumulations', 'friction'] },
+                  { label: 'exasperation', qualities: ['at the limit', 'again', 'can\'t anymore', 'worn down', 'still trying'] },
+                  { label: 'helplessness', qualities: ['wanting to but can\'t', 'the wall', 'nothing works', 'stuck', 'exhausting'] },
+                ]
+              },
+              {
+                label: 'defiance', nuances: [
+                  { label: 'resistance', qualities: ['refusing', 'won\'t yield', 'holding ground', 'deliberate', 'certain'] },
+                  { label: 'rebellion', qualities: ['against the expected', 'freely chosen', 'liberating', 'joyful', 'alive'] },
+                  { label: 'determination', qualities: ['persistent', 'quiet', 'through difficulty', 'won\'t stop', 'earned'] },
+                ]
+              },
+              {
+                label: 'resentment', nuances: [
+                  { label: 'bitterness', qualities: ['long held', 'coloring everything', 'old', 'accumulated', 'sourness'] },
+                  { label: 'grievance', qualities: ['specific', 'real', 'unresolved', 'named', 'carried'] },
+                  { label: 'envy', qualities: ['wanting what another has', 'complex', 'mixed with admiration', 'uncomfortable', 'honest'] },
+                ]
+              },
+            ]
+          },
+          {
+            label: 'Wonder',
+            items: [
+              {
+                label: 'awe', nuances: [
+                  { label: 'vastness', qualities: ['cosmic', 'oceanic', 'geological', 'beyond scale', 'humbling'] },
+                  { label: 'sublimity', qualities: ['beautiful and terrifying', 'enormous', 'involuntary', 'dissolving', 'vertiginous'] },
+                  { label: 'reverence', qualities: ['sacred', 'set apart', 'in the presence of', 'solemn', 'bowing'] },
+                  { label: 'smallness', qualities: ['intricate', 'overlooked', 'precise', 'delicate', 'astonishing in miniature'] },
+                ]
+              },
+              {
+                label: 'curiosity', nuances: [
+                  { label: 'interest', qualities: ['drawn toward', 'wanting to know more', 'open', 'patient', 'attending'] },
+                  { label: 'fascination', qualities: ['can\'t look away', 'absorbed', 'lost in it', 'time passing', 'total attention'] },
+                  { label: 'wonder-at-other', qualities: ['their depth', 'their difference', 'how they are', 'who they are', 'mysterious'] },
+                ]
+              },
+              {
+                label: 'surprise', nuances: [
+                  { label: 'delight', qualities: ['better than expected', 'gift', 'lightening', 'opening', 'yes'] },
+                  { label: 'disorientation', qualities: ['ground shifted', 'recalibrating', 'what I thought wasn\'t', 'new', 'unsettled'] },
+                  { label: 'revelation', qualities: ['suddenly clear', 'I didn\'t know', 'changed now', 'can\'t un-see', 'real'] },
+                ]
+              },
+            ]
+          },
+          {
+            label: 'Calm',
+            items: [
+              {
+                label: 'peace', nuances: [
+                  { label: 'serenity', qualities: ['above the noise', 'clear', 'still water', 'nothing pulling', 'whole'] },
+                  { label: 'contentment', qualities: ['enough', 'present', 'not wanting more or less', 'settled', 'simple'] },
+                  { label: 'equanimity', qualities: ['steady through', 'not moved from center', 'practiced', 'real', 'earned'] },
+                ]
+              },
+              {
+                label: 'stillness', nuances: [
+                  { label: 'quiet', qualities: ['absence of noise', 'inward', 'private', 'attended to', 'held'] },
+                  { label: 'suspension', qualities: ['between moments', 'not yet', 'after', 'outside time', 'held breath'] },
+                  { label: 'emptiness', qualities: ['clear', 'open', 'ready', 'after loss', 'waiting'] },
+                ]
+              },
+              {
+                label: 'acceptance', nuances: [
+                  { label: 'surrender', qualities: ['letting go', 'not fighting', 'chosen', 'with grief still present', 'real'] },
+                  { label: 'resolution', qualities: ['the story settled', 'no longer turning it over', 'integrated', 'arrived', 'at peace'] },
+                  { label: 'forgiveness', qualities: ['of another', 'of oneself', 'releasing the grip', 'choosing it', 'free'] },
+                ]
+              },
+            ]
+          },
+          {
+            label: 'Longing',
+            items: [
+              {
+                label: 'yearning', nuances: [
+                  { label: 'aspiration', qualities: ['toward something above', 'upward pull', 'reaching for', 'not yet there', 'possible'] },
+                  { label: 'desire', qualities: ['specific', 'urgent', 'whole body', 'toward', 'wanting'] },
+                  { label: 'ache', qualities: ['unnamed', 'deep', 'quiet', 'persistent', 'in the body'] },
+                  { label: 'pull', qualities: ['toward something', 'magnetic', 'can\'t not', 'drawn', 'compelled'] },
+                ]
+              },
+              {
+                label: 'nostalgia', nuances: [
+                  { label: 'remembering', qualities: ['vivid', 'in the senses', 'as if there', 'idealized', 'altered by time'] },
+                  { label: 'homesickness', qualities: ['for a place', 'for a time', 'for a person', 'embodied', 'just out of reach'] },
+                  { label: 'grief for past', qualities: ['can\'t return', 'irretrievable', 'sweetly painful', 'gone', 'bittersweet'] },
+                ]
+              },
+              {
+                label: 'hope', nuances: [
+                  { label: 'optimism', qualities: ['forward-facing', 'trusting', 'open', 'light', 'allowing itself'] },
+                  { label: 'fragile hope', qualities: ['careful with it', 'afraid to name it', 'tenuous', 'real', 'precious'] },
+                  { label: 'stubborn hope', qualities: ['despite evidence', 'persisting', 'refusing to give up', 'act of will', 'choosing it'] },
+                ]
+              },
+              {
+                label: 'anticipation', nuances: [
+                  { label: 'excitement', qualities: ['toward something good', 'rushing toward', 'can\'t wait', 'light', 'open'] },
+                  { label: 'apprehension', qualities: ['uncertain of outcome', 'bracing', 'split', 'suspended', 'both'] },
+                  { label: 'impatience', qualities: ['wanting it now', 'time too slow', 'urgent', 'restless', 'forward'] },
+                ]
+              },
+            ]
+          },
+        ],
+        items: []
+      },
+      gesture: {
+        color: 'var(--gesture)',
+        items: [
+          {
+            label: 'reaching', nuances: [
+              { label: 'upward', qualities: ['for light', 'for freedom', 'for transcendence', 'for help', 'for something above'] },
+              { label: 'outward', qualities: ['for connection', 'for another', 'for recognition', 'for contact', 'for belonging'] },
+              { label: 'inward', qualities: ['for self', 'for truth', 'for stillness', 'for core', 'for what was lost'] },
+              { label: 'across a gap', qualities: ['unbridgeable', 'just bridgeable', 'growing', 'closing', 'between people'] },
+              { label: 'despite gravity', qualities: ['persisting', 'refusing', 'defiant', 'effortful', 'earned'] },
+              { label: 'without knowing if anything is there', qualities: ['hopeful', 'uncertain', 'brave', 'open', 'faithful'] },
+            ]
+          },
+          {
+            label: 'collapsing', nuances: [
+              { label: 'inward', qualities: ['imploding', 'retreating', 'curling', 'withdrawing', 'folding'] },
+              { label: 'downward', qualities: ['surrendering to gravity', 'exhausted', 'released', 'sinking', 'earthward'] },
+              { label: 'slowly', qualities: ['inevitable', 'long coming', 'graceful', 'sorrowful', 'patient'] },
+              { label: 'suddenly', qualities: ['broken', 'shocked', 'released', 'fractured', 'immediate'] },
+              { label: 'with grace', qualities: ['dignified', 'chosen', 'elegant', 'accepting', 'beautiful'] },
+            ]
+          },
+          {
+            label: 'opening', nuances: [
+              { label: 'slowly', qualities: ['carefully', 'with trust', 'over time', 'reluctantly', 'inevitably'] },
+              { label: 'suddenly', qualities: ['involuntarily', 'broken open', 'in surprise', 'with relief', 'joyfully'] },
+              { label: 'toward another', qualities: ['in invitation', 'in vulnerability', 'in trust', 'in offering', 'in love'] },
+              { label: 'after long closure', qualities: ['finally', 'carefully', 'surprised by itself', 'changed', 'tentative'] },
+              { label: 'completely', qualities: ['nothing withheld', 'total', 'brave', 'trusting', 'transformed'] },
+            ]
+          },
+          {
+            label: 'holding', nuances: [
+              { label: 'protecting', qualities: ['something fragile', 'something precious', 'someone vulnerable', 'a wound', 'a hope'] },
+              { label: 'containing', qualities: ['feeling', 'energy', 'grief', 'joy', 'something dangerous'] },
+              { label: 'refusing to let go', qualities: ['from love', 'from fear', 'from necessity', 'from identity', 'from hope'] },
+              { label: 'receiving', qualities: ['weight', 'care', 'another', 'grief', 'presence'] },
+              { label: 'gently', qualities: ['afraid to disturb', 'reverent', 'aware of fragility', 'devoted', 'careful'] },
+            ]
+          },
+          {
+            label: 'pressing', nuances: [
+              { label: 'into earth', qualities: ['rooted', 'grounded', 'returning', 'planted', 'anchored'] },
+              { label: 'against resistance', qualities: ['insistent', 'determined', 'willful', 'persistent', 'against force'] },
+              { label: 'downward', qualities: ['with weight', 'with intention', 'with exhaustion', 'inevitably', 'heavily'] },
+              { label: 'inward', qualities: ['self-contained', 'compressed', 'pressured', 'concentrated', 'held inward'] },
+            ]
+          },
+          {
+            label: 'releasing', nuances: [
+              { label: 'pouring out', qualities: ['uncontained', 'finally', 'completely', 'without holding back', 'overflowing'] },
+              { label: 'exhaling', qualities: ['after long holding', 'relief', 'gradual', 'complete', 'quiet'] },
+              { label: 'letting go', qualities: ['of what was held', 'of grief', 'of control', 'of another', 'of the past'] },
+              { label: 'dissolving', qualities: ['into something larger', 'losing form', 'merging', 'becoming', 'disappearing'] },
+            ]
+          },
+          {
+            label: 'rising', nuances: [
+              { label: 'despite weight', qualities: ['against gravity', 'against loss', 'against pain', 'effortful', 'earned'] },
+              { label: 'freely', qualities: ['effortlessly', 'joyfully', 'uncontained', 'released', 'without reason'] },
+              { label: 'slowly', qualities: ['inevitably', 'patiently', 'persistently', 'carefully', 'deliberately'] },
+              { label: 'together', qualities: ['with another', 'collectively', 'in solidarity', 'lifted by others', 'shared'] },
+              { label: 'into something new', qualities: ['transformed', 'becoming', 'irreversible', 'surprising', 'forward'] },
+            ]
+          },
+          {
+            label: 'turning', nuances: [
+              { label: 'away', qualities: ['in protection', 'in refusal', 'moving on', 'unable to face', 'choosing distance'] },
+              { label: 'toward', qualities: ['in attention', 'in curiosity', 'in love', 'in recognition', 'choosing presence'] },
+              { label: 'inward', qualities: ['toward self', 'toward stillness', 'toward truth', 'reflecting', 'withdrawing'] },
+              { label: 'slowly', qualities: ['deliberate', 'considered', 'weighted', 'not sudden', 'with awareness'] },
+            ]
+          },
+          {
+            label: 'bowing', nuances: [
+              { label: 'in reverence', qualities: ['sacred', 'solemn', 'humble', 'grateful', 'silenced'] },
+              { label: 'in exhaustion', qualities: ['spent', 'no longer able', 'released', 'surrendered', 'honest'] },
+              { label: 'in grace', qualities: ['willingly', 'with beauty', 'dignified', 'offering', 'chosen'] },
+              { label: 'involuntary', qualities: ['overcome', 'broken', 'overwhelmed', 'beyond choice', 'total'] },
+            ]
+          },
+          {
+            label: 'withholding', nuances: [
+              { label: 'by choice', qualities: ['deliberate', 'protective of self', 'aware', 'sovereign', 'strategic'] },
+              { label: 'from fear', qualities: ['of exposure', 'of rejection', 'of being seen', 'of being too much', 'of loss'] },
+              { label: 'protectively', qualities: ['shielding what is precious', 'not yet ready', 'careful', 'loving', 'wise'] },
+              { label: 'in silence', qualities: ['everything communicated', 'nothing said', 'presence without words', 'still', 'full'] },
+            ]
+          },
+          {
+            label: 'squeeze', nuances: [
+              { label: 'compressing', qualities: ['from all sides', 'under pressure', 'concentrating', 'gathering', 'tightening'] },
+              { label: 'holding tight', qualities: ['from fear', 'from love', 'from need', 'protectively', 'desperately'] },
+              { label: 'wringing out', qualities: ['what remains', 'grief', 'tension', 'the last of something', 'itself'] },
+            ]
+          },
+          {
+            label: 'stretch', nuances: [
+              { label: 'to its limit', qualities: ['almost breaking', 'at capacity', 'testing itself', 'beyond what was expected', 'still going'] },
+              { label: 'expanding', qualities: ['outward', 'upward', 'cautiously', 'freely', 'inevitably'] },
+              { label: 'elongating', qualities: ['becoming more itself', 'growing taller', 'thinning', 'reaching further', 'drawing out'] },
+            ]
+          },
+          {
+            label: 'twist', nuances: [
+              { label: 'against itself', qualities: ['in conflict', 'in struggle', 'in resistance', 'seeking release', 'painful'] },
+              { label: 'spiraling', qualities: ['upward', 'inward', 'outward', 'continuously', 'toward something'] },
+              { label: 'wringing out', qualities: ['what was held', 'grief', 'tension', 'the last of something', 'itself'] },
+            ]
+          },
+          {
+            label: 'fold', nuances: [
+              { label: 'upon itself', qualities: ['hiding', 'protecting', 'resting', 'returning', 'layering'] },
+              { label: 'enveloping', qualities: ['something inside', 'a space', 'what it protects', 'what it holds', 'what it loves'] },
+              { label: 'collapsing', qualities: ['slowly', 'with grace', 'with exhaustion', 'finally', 'into the earth'] },
+            ]
+          },
+          {
+            label: 'pulling', nuances: [
+              { label: 'toward itself', qualities: ['gathering', 'concentrating', 'self-referential', 'inward', 'completing'] },
+              { label: 'toward another', qualities: ['magnetic', 'desiring contact', 'drawing in', 'gravitational', 'longing'] },
+              { label: 'apart', qualities: ['separating', 'dividing', 'creating distance', 'breaking', 'releasing'] },
+            ]
+          },
+          {
+            label: 'pushing away', nuances: [
+              { label: 'refusing', qualities: ['something wrong', 'what is offered', 'what is demanded', 'limitation', 'the expected'] },
+              { label: 'creating space', qualities: ['needed room', 'for breath', 'for self', 'deliberate', 'protective'] },
+              { label: 'with force', qualities: ['urgent', 'strong', 'from fear', 'from anger', 'definitive'] },
+            ]
+          },
+          {
+            label: 'repeat', nuances: [
+              { label: 'as ritual', qualities: ['intentional', 'meditative', 'sacred', 'daily', 'grounding'] },
+              { label: 'as memory', qualities: ['involuntary', 'haunting', 'returning', 'the body remembers', 'compelled'] },
+              { label: 'building', qualities: ['accumulating', 'toward something', 'layering', 'becoming pattern', 'meaning emerging'] },
+              { label: 'obsessively', qualities: ['unable to stop', 'seeking resolution', 'circular', 'consuming', 'driven'] },
+            ]
+          },
+          {
+            label: 'merge', nuances: [
+              { label: 'joining', qualities: ['willingly', 'losing edges', 'finding new form', 'becoming more', 'different now'] },
+              { label: 'dissolving into', qualities: ['something larger', 'what surrounds it', 'love', 'the whole', 'background'] },
+              { label: 'unifying', qualities: ['what was separate', 'opposites', 'past and present', 'thought and feeling', 'inside and outside'] },
+            ]
+          },
+        ]
+      }
+    };
+
+    // ─── STATE ────────────────────────────────────────────────────────────────────
+
+    let hasSculpted = false, isSplit = false, activeForm = 'a';
+    let selectedTags = new Set();
+    let selectedNuances = new Set();
+    let selectedQualities = new Set();
+    let customTags = new Set(); // free text tags added by participant
+    let formTags = {
+      a: { tags: new Set(), nuances: new Set(), qualities: new Set(), custom: new Set() },
+      b: { tags: new Set(), nuances: new Set(), qualities: new Set(), custom: new Set() },
+      rel: { tags: new Set(), nuances: new Set(), qualities: new Set(), custom: new Set() }
+    };
+    let contribCount = 0;
+    let descriptors = { a: {}, b: {} };
+    let descTimer = null;
+
+    const VWORDS = ['flat', 'low', 'mid', 'high', 'tall'];
+    const SWORDS = ['broken', 'off', 'partial', 'near', 'balanced'];
+    const CWORDS = ['smooth', 'simple', 'worked', 'complex', 'raw'];
+    const OWORDS = ['closed', 'held', 'neutral', 'open', 'expansive'];
+    const MWORDS = ['light', 'sparse', 'even', 'dense', 'concentrated'];
+
+    // ─── RENDER TAGS ─────────────────────────────────────────────────────────────
+
+    function getTags() { return isSplit ? formTags[activeForm].tags : selectedTags; }
+    function getNuances() { return isSplit ? formTags[activeForm].nuances : selectedNuances; }
+    function getQualities() { return isSplit ? formTags[activeForm].qualities : selectedQualities; }
+    function getCustom() { return isSplit ? formTags[activeForm].custom : customTags; }
+
+    function renderTags() {
+      const container = document.getElementById('tag-content');
+      container.innerHTML = '';
+
+      Object.entries(TAGS).forEach(([cat, data]) => {
+        // Handle emotion families (three-level hierarchy)
+        if (data.families) {
+          data.families.forEach(family => {
+            const sec = document.createElement('div');
+            sec.className = 'tag-section';
+
+            const hd = document.createElement('div');
+            hd.className = 'tag-cat-hd';
+            hd.innerHTML = `<span style="color:${data.color}">${family.label}</span>`;
+            sec.appendChild(hd);
+
+            const wrap = document.createElement('div');
+            wrap.className = 'tags-wrap';
+
+            family.items.forEach(item => {
+              const key = `${cat}:${item.label}`;
+              const isSel = getTags().has(key);
+
+              const chip = document.createElement('div');
+              chip.className = `tag-chip${isSel ? ' sel' : ''}`;
+              chip.textContent = item.label;
+              chip.addEventListener('click', () => toggleTag(cat, item, key));
+              wrap.appendChild(chip);
+
+              if (isSel && item.nuances.length) {
+                const nr = document.createElement('div');
+                nr.className = 'nuance-row open';
+
+                item.nuances.forEach(nuance => {
+                  const nkey = `${key}:${nuance.label}`;
+                  const nSel = getNuances().has(nkey);
+
+                  const nc = document.createElement('div');
+                  nc.className = `nuance-chip${nSel ? ' sel' : ''}`;
+                  nc.textContent = nuance.label;
+                  nc.addEventListener('click', e => { e.stopPropagation(); toggleNuance(item, key, nuance, nkey); });
+                  nr.appendChild(nc);
+
+                  if (nSel && nuance.qualities && nuance.qualities.length) {
+                    const qr = document.createElement('div');
+                    qr.className = 'quality-row open';
+                    nuance.qualities.forEach(q => {
+                      const qkey = `${nkey}:${q}`;
+                      const qSel = getQualities().has(qkey);
+                      const qc = document.createElement('div');
+                      qc.className = `quality-chip${qSel ? ' sel' : ''}`;
+                      qc.textContent = q;
+                      qc.addEventListener('click', e => { e.stopPropagation(); toggleQuality(qkey); });
+                      qr.appendChild(qc);
+                    });
+                    nr.appendChild(qr);
+                  }
+                });
+                wrap.appendChild(nr);
+              }
+            });
+
+            sec.appendChild(wrap);
+            container.appendChild(sec);
+          });
+          return;
+        }
+
+        // Handle gesture (flat items)
+        const sec = document.createElement('div');
+        sec.className = 'tag-section';
+
+        const hd = document.createElement('div');
+        hd.className = 'tag-cat-hd';
+        hd.innerHTML = `<span style="color:${data.color}">${cat}</span>`;
+        sec.appendChild(hd);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'tags-wrap';
+
+        data.items.forEach(item => {
+          const key = `${cat}:${item.label}`;
+          const isSel = getTags().has(key);
+
+          const chip = document.createElement('div');
+          chip.className = `tag-chip${isSel ? ' sel' : ''}`;
+          chip.textContent = item.label;
+          chip.addEventListener('click', () => toggleTag(cat, item, key));
+          wrap.appendChild(chip);
+
+          if (isSel && item.nuances.length) {
+            const nr = document.createElement('div');
+            nr.className = 'nuance-row open';
+
+            item.nuances.forEach(nuance => {
+              const nkey = `${key}:${nuance.label}`;
+              const nSel = getNuances().has(nkey);
+
+              const nc = document.createElement('div');
+              nc.className = `nuance-chip${nSel ? ' sel' : ''}`;
+              nc.textContent = nuance.label;
+              nc.addEventListener('click', e => { e.stopPropagation(); toggleNuance(item, key, nuance, nkey); });
+              nr.appendChild(nc);
+
+              if (nSel && nuance.qualities && nuance.qualities.length) {
+                const qr = document.createElement('div');
+                qr.className = 'quality-row open';
+                nuance.qualities.forEach(q => {
+                  const qkey = `${nkey}:${q}`;
+                  const qSel = getQualities().has(qkey);
+                  const qc = document.createElement('div');
+                  qc.className = `quality-chip${qSel ? ' sel' : ''}`;
+                  qc.textContent = q;
+                  qc.addEventListener('click', e => { e.stopPropagation(); toggleQuality(qkey); });
+                  qr.appendChild(qc);
+                });
+                nr.appendChild(qr);
+              }
+            });
+            wrap.appendChild(nr);
+          }
+        });
+
+        sec.appendChild(wrap);
+        container.appendChild(sec);
+      });
+
+      updateSelCount();
+    }
+
+    function findItem(cat, key) {
+      const data = TAGS[cat];
+      if (data.families) {
+        for (const family of data.families) {
+          const found = family.items.find(i => `${cat}:${i.label}` === key);
+          if (found) return found;
+        }
+      }
+      return data.items.find(i => `${cat}:${i.label}` === key);
+    }
+
+    function toggleTag(cat, item, key) {
+      const tags = getTags();
+      const nuances = getNuances();
+      const qualities = getQualities();
+      if (tags.has(key)) {
+        tags.delete(key);
+        item.nuances.forEach(n => {
+          const nkey = `${key}:${n.label}`;
+          nuances.delete(nkey);
+          if (n.qualities) n.qualities.forEach(q => qualities.delete(`${nkey}:${q}`));
+        });
+      } else {
+        tags.add(key);
+      }
+      renderTags(); checkContrib(); updateSummary();
+    }
+
+    function toggleNuance(item, key, nuance, nkey) {
+      const nuances = getNuances();
+      const qualities = getQualities();
+      if (nuances.has(nkey)) {
+        nuances.delete(nkey);
+        if (nuance.qualities) nuance.qualities.forEach(q => qualities.delete(`${nkey}:${q}`));
+      } else {
+        nuances.add(nkey);
+      }
+      renderTags(); updateSummary();
+    }
+
+    function toggleQuality(qkey) {
+      const qualities = getQualities();
+      if (qualities.has(qkey)) qualities.delete(qkey);
+      else qualities.add(qkey);
+      renderTags(); updateSummary();
+    }
+
+    function updateSelCount() {
+      const n = getTags().size + getNuances().size + getQualities().size + getCustom().size;
+      const el = document.getElementById('sel-count');
+      if (n === 0) el.innerHTML = 'Select tags to describe the form';
+      else el.innerHTML = `<strong>${n}</strong> tag${n > 1 ? 's' : ''} selected`;
+    }
+
+    function updateSummary() {
+      const parts = [...getTags()].map(k => k.split(':')[1]);
+      const nparts = [...getNuances()].map(k => k.split(':')[2]);
+      const cparts = [...getCustom()];
+      document.getElementById('tags-summary').textContent = [...parts, ...nparts, ...cparts].slice(0, 4).join(' · ');
+    }
+
+    function checkContrib() {
+      document.getElementById('add-btn').disabled = !(hasSculpted && (getTags().size >= 1 || getCustom().size >= 1));
+    }
+
+    // Activate step visuals
+    function activateStep(n) {
+      [[1, 'sn1', 'st1'], [2, 'sn2', 'st2'], [3, 'sn4', 'st4']].forEach(([step, numId, titleId], i) => {
+        const num = document.getElementById(numId);
+        const title = document.getElementById(titleId);
+        if (num) num.className = 'step-num' + (i + 1 <= n ? ' active' : '');
+        if (title) title.className = 'step-title' + (i + 1 <= n ? ' active' : '');
+      });
+      if (n >= 2) document.getElementById('tag-scroll').classList.add('active');
+    }
+
+    function selectForm(form) {
+      activeForm = form;
+      ['a', 'b', 'rel'].forEach(f => {
+        document.getElementById('sel-' + f).className = 'fsel' + (f === form ? ' act' : '');
+      });
+      renderTags();
+      updateSummary();
+    }
+
+    // ─── PHYSICAL FORM DESCRIPTION ───────────────────────────────────────────────
+    // Describes what the system physically observes — no meaning assigned
+
+    function interpretForm(d) {
+      const chips = [];
+
+      // Verticality
+      if (d.vert > 0.7) chips.push({ label: 'tall', primary: true });
+      else if (d.vert > 0.5) chips.push({ label: 'upright', primary: true });
+      else if (d.vert < 0.25) chips.push({ label: 'flat', primary: true });
+      else chips.push({ label: 'low', primary: true });
+
+      // Openness / mass distribution
+      if (d.open > 0.65) chips.push({ label: 'spread', primary: true });
+      else if (d.open < 0.3) chips.push({ label: 'compressed', primary: true });
+      else chips.push({ label: 'contained', primary: true });
+
+      // Symmetry
+      if (d.sym < 0.35) chips.push({ label: 'asymmetric', primary: false });
+      else if (d.sym > 0.75) chips.push({ label: 'balanced', primary: false });
+      else chips.push({ label: 'off-axis', primary: false });
+
+      // Surface
+      if (d.comp > 0.6) chips.push({ label: 'worked surface', primary: false });
+      else if (d.comp < 0.18) chips.push({ label: 'smooth', primary: false });
+      else chips.push({ label: 'simple surface', primary: false });
+
+      // Mass
+      if (d.mass > 0.65) chips.push({ label: 'dense', primary: false });
+      else if (d.mass < 0.3) chips.push({ label: 'light', primary: false });
+
+      return chips.slice(0, 5);
+    }
+
+    function updateCanvasReading(d) {
+      const chips = interpretForm(d);
+      const interpEl = document.getElementById('sys-interp');
+      interpEl.innerHTML = chips.map(c =>
+        `<div class="interp-chip${c.primary ? ' primary' : ''}">${c.label}</div>`
+      ).join('');
+      interpEl.classList.add('show');
+    }
+
+    async function callClaude(d) {
+      const panel = document.getElementById('sys-panel');
+      panel.innerHTML = '<span class="sys-thinking">reading form...</span>';
+      const vi = Math.min(4, Math.floor(d.vert * 5));
+      const oi = Math.min(4, Math.floor(d.open * 5));
+      const ci = Math.min(4, Math.floor(d.comp * 5));
+      const si = Math.min(4, Math.floor(d.sym * 5));
+
+      try {
+        const resp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 1000,
+            system: `You interpret clay forms for CL[AI], a material AI interface. Given form descriptors, write one short poetic sentence — not geometric, but expressive and meaningful. 15 words maximum. Lowercase. No period. No preamble.`,
+            messages: [{ role: 'user', content: `verticality: ${VWORDS[vi]}, symmetry: ${SWORDS[si]}, surface: ${CWORDS[ci]}, openness: ${OWORDS[oi]}` }]
+          })
+        });
+        const data = await resp.json();
+        panel.textContent = data.content.map(c => c.text || '').join('').trim();
+      } catch (e) {
+        panel.textContent = `${VWORDS[vi]}, ${OWORDS[oi]}, ${CWORDS[ci]} surface`;
+      }
+    }
+
+    // ─── THREE.JS ─────────────────────────────────────────────────────────────────
+
+    const canvas = document.getElementById('c');
+    const cwEl = document.getElementById('cw');
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x141010, 1);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x141010, 0.04);
+
+    const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+    camera.position.set(0, 1.2, 6.5);
+    camera.lookAt(0, 0, 0);
+
+    scene.add(new THREE.AmbientLight(0xb8a090, 0.22));
+    const kl = new THREE.DirectionalLight(0xfff0e0, 1.8);
+    kl.position.set(3, 6, 4); kl.castShadow = true;
+    kl.shadow.mapSize.width = kl.shadow.mapSize.height = 2048;
+    scene.add(kl);
+    const rl2 = new THREE.DirectionalLight(0xffe0c0, 0.9);
+    rl2.position.set(-4, 2, 1); scene.add(rl2);
+    const fl2 = new THREE.DirectionalLight(0x5a3820, 0.4);
+    fl2.position.set(0, -3, -2); scene.add(fl2);
+
+    const plinth = new THREE.Mesh(
+      new THREE.BoxGeometry(5, 0.04, 5),
+      new THREE.MeshStandardMaterial({ color: 0x0a0806, roughness: 0.99 })
+    );
+    plinth.position.y = -0.87; plinth.receiveShadow = true;
+    scene.add(plinth);
+
+    // Noise for clay texture
+    function noise3(x, y, z) {
+      const h = (Math.floor(x) * 374761393 + Math.floor(y) * 668265263 + Math.floor(z) * 2147483647) & 0x7fffffff;
+      const h2 = (h ^ (h >> 13)) * 1274126177;
+      return ((h2 ^ (h2 >> 16)) / 0x7fffffff) * 2 - 1;
+    }
+    function fbm(x, y, z, o) {
+      let v = 0, a = 0.5, f = 1, m = 0;
+      for (let i = 0; i < o; i++) { v += noise3(x * f, y * f, z * f) * a; m += a; a *= 0.5; f *= 2.1; }
+      return v / m;
+    }
+
+    const SEGS = 96;
+
+    function makeClay(posX, color) {
+      const geo = new THREE.SphereGeometry(1, SEGS, SEGS);
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+        const len = Math.sqrt(x * x + y * y + z * z);
+        const nx = x / len, ny = y / len, nz = z / len;
+        const lump = fbm(x * 0.8 + 3.1, y * 0.8 + 1.7, z * 0.8 + 2.3, 3) * 0.04;
+        const bump = fbm(x * 2.2 + 7.3, y * 2.2 + 4.1, z * 2.2 + 6.7, 3) * 0.015;
+        const fine = fbm(x * 5.5 + 1.1, y * 5.5 + 8.3, z * 5.5 + 3.9, 2) * 0.006;
+        const flatBase = Math.max(0, -y) * 0.06;
+        const squash = y * 0.03;
+        const total = lump + bump + fine - flatBase - squash;
+        pos.setXYZ(i, x + nx * total, y + ny * total, z + nz * total);
+      }
+      pos.needsUpdate = true; geo.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.97, metalness: 0 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.position.x = posX; scene.add(mesh);
+      const orig = geo.attributes.position.array.slice();
+      const disp = new Float32Array(geo.attributes.position.count).fill(0);
+      const vn = [];
+      for (let i = 0; i < geo.attributes.position.count; i++) {
+        const x = orig[i * 3], y = orig[i * 3 + 1], z = orig[i * 3 + 2];
+        const l = Math.sqrt(x * x + y * y + z * z);
+        vn.push(x / l, y / l, z / l);
+      }
+      return { geo, mat, mesh, orig, disp, vn };
+    }
+
+    let clayA = makeClay(0, 0xA08060), clayB = null;
+    let tool = 'push', brushR = 0.36;
+    let mDown = false, sculpt = false, rotat = false;
+    let rotY = 0, rotX = 0.12, rotS = { x: 0, y: 0 };
+    let isSplitState = false;
+
+    const rc = new THREE.Raycaster();
+    const mv2 = new THREE.Vector2();
+
+    function resize() {
+      const tb = cwEl.querySelector('.tool-bar');
+      const tbH = tb ? tb.offsetHeight : 40;
+      const w = cwEl.clientWidth, h = cwEl.clientHeight - tbH;
+      renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+    }
+    resize(); window.addEventListener('resize', resize);
+
+    function sculptAt(cx, cy) {
+      const rect = canvas.getBoundingClientRect();
+      mv2.x = ((cx - rect.left) / rect.width) * 2 - 1;
+      mv2.y = -((cy - rect.top) / rect.height) * 2 + 1;
+      rc.setFromCamera(mv2, camera);
+      const targets = isSplitState ? [clayA, clayB] : [clayA];
+      const hits = rc.intersectObjects(targets.map(t => t.mesh));
+      if (!hits.length) return;
+      const hit = hits[0];
+      const tc = targets.find(t => t.mesh === hit.object);
+      if (!tc) return;
+      if (isSplitState) {
+        const nf = tc === clayA ? 'a' : 'b';
+        if (nf !== activeForm && activeForm !== 'rel') selectForm(nf);
+      }
+      const hp = hit.point.clone(); tc.mesh.worldToLocal(hp);
+      doSculpt(tc, hp);
+      const key = tc === clayA ? 'a' : 'b';
+      const d = calcDesc(tc);
+      descriptors[key] = d;
+      updateCanvasReading(d);
+      updatePills(d);
+      if (!hasSculpted) {
+        hasSculpted = true;
+        activateStep(2);
+        renderTags();
+        checkContrib();
+      }
+    }
+
+    function doSculpt(clay, hp) {
+      const pos = clay.geo.attributes.position;
+      const str = tool === 'smooth' ? 0 : tool === 'flatten' ? 0.016 : tool === 'pinch' ? 0.05 : tool === 'pull' ? 0.038 : 0.028;
+      for (let i = 0; i < pos.count; i++) {
+        const dx = pos.getX(i) - hp.x, dy = pos.getY(i) - hp.y, dz = pos.getZ(i) - hp.z;
+        const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (d >= brushR) continue;
+        const t = d / brushR;
+        const fall = 1 - t * t * t * (t * (t * 6 - 15) + 10);
+        const ox = clay.orig[i * 3], oy = clay.orig[i * 3 + 1], oz = clay.orig[i * 3 + 2];
+        if (tool === 'smooth') { clay.disp[i] *= 0.94; }
+        else if (tool === 'push') { clay.disp[i] -= fall * str; }
+        else if (tool === 'pull') { clay.disp[i] += fall * str; }
+        else if (tool === 'flatten') {
+          const cy = oy + clay.vn[i * 3 + 1] * clay.disp[i];
+          clay.disp[i] += (hp.y - cy) * fall * 0.18;
+        } else if (tool === 'pinch') {
+          const tx = hp.x - pos.getX(i), tz = hp.z - pos.getZ(i);
+          const tl = Math.sqrt(tx * tx + tz * tz);
+          if (tl > 0.01) pos.setXYZ(i, pos.getX(i) + tx / tl * fall * str, pos.getY(i), pos.getZ(i) + tz / tl * fall * str);
+          clay.disp[i] -= fall * str * 0.3;
+        }
+        clay.disp[i] = Math.max(-0.85, Math.min(5.0, clay.disp[i]));
+        let nx = clay.vn[i * 3], ny = clay.vn[i * 3 + 1], nz = clay.vn[i * 3 + 2];
+        if (tool === 'pull') {
+          const upBlend = Math.max(0, ny) * 0.65;
+          nx = nx * (1 - upBlend); ny = ny * (1 - upBlend) + upBlend; nz = nz * (1 - upBlend);
+          const nl = Math.sqrt(nx * nx + ny * ny + nz * nz);
+          nx /= nl; ny /= nl; nz /= nl;
+        }
+        pos.setXYZ(i, ox + nx * clay.disp[i], oy + ny * clay.disp[i], oz + nz * clay.disp[i]);
+      }
+      pos.needsUpdate = true; clay.geo.computeVertexNormals();
+    }
+
+    function morphToShape(clay, shape) {
+      const pos = clay.geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const ox = clay.orig[i * 3], oy = clay.orig[i * 3 + 1], oz = clay.orig[i * 3 + 2];
+        const curX = pos.getX(i), curY = pos.getY(i), curZ = pos.getZ(i);
+        let tX, tY, tZ;
+        if (shape === 'cylinder') {
+          const r = Math.sqrt(curX * curX + curZ * curZ);
+          const s = r > 0.01 ? 0.75 / r : 1;
+          tX = curX * s; tY = curY; tZ = curZ * s;
+        } else {
+          const l = Math.sqrt(curX * curX + curY * curY + curZ * curZ);
+          const s = l > 0.01 ? 1.0 / l : 1;
+          tX = curX * s; tY = curY * s; tZ = curZ * s;
+        }
+        pos.setXYZ(i, curX + (tX - curX) * 0.35, curY + (tY - curY) * 0.35, curZ + (tZ - curZ) * 0.35);
+        const nx = clay.vn[i * 3], ny = clay.vn[i * 3 + 1], nz = clay.vn[i * 3 + 2];
+        clay.disp[i] = (pos.getX(i) - ox) * nx + (pos.getY(i) - oy) * ny + (pos.getZ(i) - oz) * nz;
+      }
+      pos.needsUpdate = true; clay.geo.computeVertexNormals();
+      const d = calcDesc(clay); updateCanvasReading(d); updatePills(d);
+    }
+
+    function calcDesc(clay) {
+      const pos = clay.geo.attributes.position;
+      let mnY = Infinity, mxY = -Infinity, mnX = Infinity, mxX = -Infinity;
+      let pD = 0, nD = 0, rM = 0, lM = 0, vS = 0;
+      for (let i = 0; i < pos.count; i++) {
+        const y = pos.getY(i), x = pos.getX(i), d = clay.disp[i];
+        mnY = Math.min(mnY, y); mxY = Math.max(mxY, y);
+        mnX = Math.min(mnX, x); mxX = Math.max(mxX, x);
+        if (d > 0) pD += d; else nD += Math.abs(d);
+        if (x > 0) rM += d; else lM += d;
+        vS += d * d;
+      }
+      const h = mxY - mnY, w = mxX - mnX + 0.01;
+      return {
+        vert: Math.min(1, h / w * 0.72),
+        sym: 1 - Math.min(1, Math.abs(rM - lM) / (Math.abs(rM) + Math.abs(lM) + 0.01)),
+        comp: Math.min(1, Math.sqrt(vS / pos.count) * 3.2),
+        mass: Math.min(1, pD / (pD + nD + 0.01)),
+        open: 1 - Math.min(1, pD / (pD + nD + 0.01))
+      };
+    }
+
+    function updatePills(d) {
+      // Pills replaced by semantic interpretation — no-op kept for compatibility
+    }
+
+    // Mouse
+    canvas.addEventListener('mousedown', e => {
+      mDown = true;
+      if (e.shiftKey) { rotat = true; rotS = { x: e.clientX, y: e.clientY }; }
+      else { sculpt = true; sculptAt(e.clientX, e.clientY); }
+    });
+    canvas.addEventListener('mousemove', e => {
+      if (!mDown) return;
+      if (rotat) { rotY += (e.clientX - rotS.x) * 0.007; rotX += (e.clientY - rotS.y) * 0.004; rotX = Math.max(-0.55, Math.min(0.8, rotX)); rotS = { x: e.clientX, y: e.clientY }; }
+      else if (sculpt) { sculptAt(e.clientX, e.clientY); }
+    });
+    canvas.addEventListener('mouseup', () => { mDown = sculpt = rotat = false; });
+    canvas.addEventListener('mouseleave', () => { mDown = sculpt = rotat = false; });
+    canvas.addEventListener('wheel', e => { rotY += e.deltaX * 0.003; rotX += e.deltaY * 0.003; rotX = Math.max(-0.55, Math.min(0.8, rotX)); e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); sculpt = mDown = true; sculptAt(e.touches[0].clientX, e.touches[0].clientY); });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); if (sculpt) sculptAt(e.touches[0].clientX, e.touches[0].clientY); });
+    canvas.addEventListener('touchend', () => { mDown = sculpt = false; });
+
+    // Tools
+    ['push', 'pull', 'smooth', 'flatten', 'pinch'].forEach(t => {
+      document.getElementById('bt-' + t).addEventListener('click', () => {
+        tool = t;
+        document.querySelectorAll('.tb').forEach(b => b.classList.remove('on'));
+        document.getElementById('bt-' + t).classList.add('on');
+      });
+    });
+
+    document.getElementById('bsize').addEventListener('input', e => { brushR = parseInt(e.target.value) / 100; });
+
+    // Custom tags
+    function addCustomTag(val) {
+      val = val.trim().toLowerCase();
+      if (!val) return;
+      getCustom().add(val);
+      renderCustomTags();
+      updateSelCount();
+      updateSummary();
+      checkContrib();
+      document.getElementById('custom-tag-input').value = '';
+    }
+
+    function renderCustomTags() {
+      const wrap = document.getElementById('custom-tags-display');
+      wrap.innerHTML = '';
+      getCustom().forEach(tag => {
+        const chip = document.createElement('div');
+        chip.className = 'tag-chip sel';
+        chip.style.cssText = 'display:flex;align-items:center;gap:5px;';
+        chip.innerHTML = `<span>${tag}</span><span style="cursor:pointer;opacity:0.6;font-size:10px;" onclick="removeCustomTag('${tag}')">×</span>`;
+        wrap.appendChild(chip);
+      });
+    }
+
+    window.removeCustomTag = (tag) => {
+      getCustom().delete(tag);
+      renderCustomTags();
+      updateSelCount();
+      updateSummary();
+      checkContrib();
+    };
+
+    document.getElementById('custom-tag-btn').addEventListener('click', () => {
+      addCustomTag(document.getElementById('custom-tag-input').value);
+    });
+
+    document.getElementById('custom-tag-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') addCustomTag(e.target.value);
+    });
+
+    document.getElementById('custom-tag-input').addEventListener('focus', () => {
+      document.getElementById('custom-tag-input').style.borderColor = 'var(--clay)';
+    });
+    document.getElementById('custom-tag-input').addEventListener('blur', () => {
+      document.getElementById('custom-tag-input').style.borderColor = 'var(--chip-border)';
+    });
+
+    // Merge — blend both clay geometries into one centered form
+    document.getElementById('bt-merge').addEventListener('click', () => {
+      if (!isSplitState || !clayB) return;
+
+      const posA = clayA.geo.attributes.position;
+      const posB = clayB.geo.attributes.position;
+
+      // Center A, blend A and B vertex positions
+      clayA.mesh.position.x = 0;
+      for (let i = 0; i < posA.count; i++) {
+        const ax = posA.getX(i), ay = posA.getY(i), az = posA.getZ(i);
+        // B is mirrored position — offset by its world x
+        const bx = posB.getX(i) + 1.2, by = posB.getY(i), bz = posB.getZ(i);
+        // Blend — average of both forms
+        posA.setXYZ(i, (ax + bx) * 0.5 - 0.6, (ay + by) * 0.5, (az + bz) * 0.5);
+        // Update displacement
+        const ox = clayA.orig[i * 3], oy = clayA.orig[i * 3 + 1], oz = clayA.orig[i * 3 + 2];
+        const nx = clayA.vn[i * 3], ny = clayA.vn[i * 3 + 1], nz = clayA.vn[i * 3 + 2];
+        const dx = posA.getX(i) - ox, dy = posA.getY(i) - oy, dz = posA.getZ(i) - oz;
+        clayA.disp[i] = dx * nx + dy * ny + dz * nz;
+      }
+      posA.needsUpdate = true; clayA.geo.computeVertexNormals();
+
+      // Remove B
+      scene.remove(clayB.mesh); clayB = null;
+      isSplitState = false; isSplit = false;
+
+      // Smooth the merged form a couple passes
+      for (let pass = 0; pass < 3; pass++) {
+        for (let i = 0; i < posA.count; i++) clayA.disp[i] *= 0.92;
+        for (let i = 0; i < posA.count; i++) {
+          const ox = clayA.orig[i * 3], oy = clayA.orig[i * 3 + 1], oz = clayA.orig[i * 3 + 2];
+          const nx = clayA.vn[i * 3], ny = clayA.vn[i * 3 + 1], nz = clayA.vn[i * 3 + 2];
+          posA.setXYZ(i, ox + nx * clayA.disp[i], oy + ny * clayA.disp[i], oz + nz * clayA.disp[i]);
+        }
+        posA.needsUpdate = true;
+      }
+      clayA.geo.computeVertexNormals();
+
+      // Hide split UI
+      document.getElementById('split-sel').classList.remove('show');
+      document.getElementById('split-ind').classList.remove('show');
+      document.getElementById('bt-split').classList.remove('on');
+      document.getElementById('bt-split').style.display = '';
+      document.getElementById('bt-merge').style.display = 'none';
+
+      // Update readings
+      const d = calcDesc(clayA); descriptors.a = d;
+      updateCanvasReading(d); updatePills(d);
+      selectForm('a');
+    });
+
+    document.getElementById('bt-cylinder').addEventListener('click', () => {
+      const target = isSplitState ? (activeForm === 'b' ? clayB : clayA) : clayA;
+      morphToShape(target, 'cylinder');
+    });
+    document.getElementById('bt-sphere').addEventListener('click', () => {
+      const target = isSplitState ? (activeForm === 'b' ? clayB : clayA) : clayA;
+      morphToShape(target, 'sphere');
+    });
+
+    document.getElementById('bt-split').addEventListener('click', () => {
+      if (!hasSculpted || isSplitState) return;
+      isSplitState = true; isSplit = true;
+      clayA.mesh.position.x = -1.2;
+      const geo2 = new THREE.SphereGeometry(1, SEGS, SEGS);
+      const posA = clayA.geo.attributes.position;
+      const pos2 = geo2.attributes.position;
+      for (let i = 0; i < posA.count; i++) pos2.setXYZ(i, posA.getX(i), posA.getY(i), posA.getZ(i));
+      pos2.needsUpdate = true; geo2.computeVertexNormals();
+      const mat2 = new THREE.MeshStandardMaterial({ color: 0x907050, roughness: 0.97, metalness: 0 });
+      clayB = { geo: geo2, mat: mat2, mesh: new THREE.Mesh(geo2, mat2), orig: geo2.attributes.position.array.slice(), disp: new Float32Array(geo2.attributes.position.count).fill(0), vn: [...clayA.vn] };
+      clayB.mesh.position.x = 1.2; clayB.mesh.castShadow = true; clayB.mesh.receiveShadow = true;
+      scene.add(clayB.mesh);
+      document.getElementById('split-sel').classList.add('show');
+      document.getElementById('split-ind').classList.add('show');
+      document.getElementById('bt-split').classList.add('on');
+      document.getElementById('bt-split').style.display = 'none';
+      document.getElementById('bt-merge').style.display = '';
+      let t2 = 0;
+      const anim = setInterval(() => { t2 += 0.05; const e = 1 - Math.pow(1 - Math.min(1, t2), 3); clayA.mesh.position.x = -1.2 * e; if (clayB) clayB.mesh.position.x = 1.2 * e; if (t2 >= 1) clearInterval(anim); }, 16);
+    });
+
+    document.getElementById('bt-reset').addEventListener('click', () => {
+      const pos = clayA.geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) { clayA.disp[i] = 0; pos.setXYZ(i, clayA.orig[i * 3], clayA.orig[i * 3 + 1], clayA.orig[i * 3 + 2]); }
+      pos.needsUpdate = true; clayA.geo.computeVertexNormals(); clayA.mesh.position.x = 0;
+      if (clayB) { scene.remove(clayB.mesh); clayB = null; }
+      isSplitState = false; isSplit = false; hasSculpted = false;
+      selectedTags = new Set(); selectedNuances = new Set(); selectedQualities = new Set(); customTags = new Set();
+      formTags = { a: { tags: new Set(), nuances: new Set(), qualities: new Set(), custom: new Set() }, b: { tags: new Set(), nuances: new Set(), qualities: new Set(), custom: new Set() }, rel: { tags: new Set(), nuances: new Set(), qualities: new Set(), custom: new Set() } };
+      document.getElementById('split-sel').classList.remove('show');
+      document.getElementById('split-ind').classList.remove('show');
+      document.getElementById('bt-split').classList.remove('on');
+      const sysHeadline = document.getElementById('sys-headline');
+      if (sysHeadline) sysHeadline.classList.remove('show');
+      const sysSub = document.getElementById('sys-sub');
+      if (sysSub) sysSub.classList.remove('show');
+      const sysPanel = document.getElementById('sys-panel');
+      if (sysPanel) sysPanel.textContent = 'sculpt to begin';
+      document.getElementById('tags-summary').textContent = '';
+      activateStep(1);
+      document.getElementById('tag-scroll').classList.remove('active');
+      document.getElementById('tag-content').innerHTML = '';
+      document.getElementById('custom-tags-display').innerHTML = '';
+      document.getElementById('custom-tag-input').value = '';
+      document.getElementById('sel-count').textContent = 'Select tags to describe the form';
+      document.getElementById('add-btn').disabled = true;
+    });
+
+    // Render
+    function animate() { requestAnimationFrame(animate); clayA.mesh.rotation.y = rotY; clayA.mesh.rotation.x = rotX; if (clayB) { clayB.mesh.rotation.y = rotY; clayB.mesh.rotation.x = rotX; } renderer.render(scene, camera); }
+    animate();
+
+    // Contribute
+    const API = "https://ai.clai-softmode.workers.dev";
+
+    document.getElementById('add-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('add-btn');
+      btn.disabled = true; btn.textContent = 'Recording...';
+      const tags = [...selectedTags].map(k => k.split(':').slice(1).join(':'));
+      const nuances = [...selectedNuances].map(k => k.split(':').slice(2).join(':'));
+      const qualities = [...selectedQualities].map(k => k.split(':').slice(3).join(':'));
+      const custom = [...customTags];
+      const entry = { id: Date.now(), descriptors: { ...descriptors }, tags, nuances, qualities, custom, split: isSplitState, timestamp: new Date().toISOString() };
+
+      let similar = [];
+      try {
+        const res = await fetch(`${API}/contribute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ descriptors, tags, nuances, qualities, custom }),
+        });
+        if (res.ok) {
+          const simRes = await fetch(`${API}/similar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ descriptors }),
+          });
+          if (simRes.ok) similar = await simRes.json();
+        }
+      } catch (e) {
+        // Degrade gracefully — Worker unreachable
+      }
+
+      contribCount++;
+      document.getElementById('cn').textContent = contribCount;
+      document.getElementById('fn').textContent = contribCount;
+      addFeed(entry, similar);
+      document.getElementById('confirm').classList.add('show');
+      btn.textContent = 'Added';
+      setTimeout(() => { document.getElementById('confirm').classList.remove('show'); document.getElementById('bt-reset').click(); btn.textContent = 'Add to Dataset'; }, 2200);
+    });
+
+    function addFeed(entry, similar) {
+      const feedEl = document.getElementById('feed-items');
+
+      // Contribution chips
+      const fi = document.createElement('div'); fi.className = 'fi';
+      entry.tags.forEach(t => { const c = document.createElement('span'); c.className = 'fc'; c.textContent = t; fi.appendChild(c); });
+      entry.nuances.slice(0, 3).forEach(n => { const c = document.createElement('span'); c.className = 'fc n'; c.textContent = n; fi.appendChild(c); });
+      feedEl.insertBefore(fi, feedEl.firstChild);
+
+      // Similar past forms
+      if (similar && similar.length) {
+        const si = document.createElement('div');
+        si.className = 'fi';
+        si.style.cssText = 'padding-top:3px;border-top:1px solid rgba(237,232,224,0.04);margin-top:4px;';
+        const lbl = document.createElement('span');
+        lbl.style.cssText = 'font-size:7px;color:var(--dim);letter-spacing:0.1em;text-transform:uppercase;margin-right:6px;white-space:nowrap;';
+        lbl.textContent = 'Similar:';
+        si.appendChild(lbl);
+        similar.slice(0, 3).forEach(s => {
+          const tags = s.tags?.tags || [];
+          if (tags.length) {
+            const sc = document.createElement('span');
+            sc.className = 'fc';
+            sc.style.cssText = 'opacity:0.6;';
+            sc.textContent = tags[0];
+            si.appendChild(sc);
+          }
+        });
+        feedEl.insertBefore(si, feedEl.firstChild);
+      }
+    }
+
+    window.storage?.get('total').then(r => { if (r) document.getElementById('cn').textContent = r.value; }).catch(() => { });
+    activateStep(1);
+  </script>
+</body>
+
+</html>
